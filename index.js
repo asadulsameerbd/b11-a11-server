@@ -1,5 +1,5 @@
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const cors = require("cors")
 const app = express()
@@ -11,6 +11,7 @@ app.use(cors())
 app.use(express.json())
 
 
+// mongoDB
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.eynxzxz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -28,8 +29,11 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
-        // collection
+        // Client side collection
         const clientSide = client.db("assignment11").collection("client-side")
+
+
+
 
         // client add 
 
@@ -44,6 +48,19 @@ async function run() {
         app.get('/addtutors', async (req, res) =>{
             const tutors = await clientSide.find().toArray()
             res.send(tutors)
+        })
+
+
+        // mytutorial 
+
+        app.get("/add-tutors" , async(req, res)=>{
+            const email = req.query.email
+            const query = {}
+            if(email){
+                query.email = email
+            }
+            const result = await clientSide.find(query).toArray()
+            res.send(result)
         })
 
 

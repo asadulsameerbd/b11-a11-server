@@ -31,6 +31,7 @@ async function run() {
 
         // Client side collection
         const clientSide = client.db("assignment11").collection("client-side")
+        const bookedCollection = client.db("assignment11").collection("bookedTutor")
 
 
 
@@ -50,6 +51,14 @@ async function run() {
             res.send(tutors)
         })
 
+        //tutor details
+        app.get("/tutorDetails/:id" , async(req, res)=>{
+            const id = req.params.id
+            const query = {_id : new ObjectId(id)}
+            const result = await clientSide.findOne(query)
+            res.send(result)
+        })
+
 
         // mytutorial 
 
@@ -62,6 +71,66 @@ async function run() {
             const result = await clientSide.find(query).toArray()
             res.send(result)
         })
+
+        // Booked tutor
+
+        app.post('/bookedTutor', async(req, res)=>{
+            const tutor = req.body;
+            const alreadyBooked = await bookedCollection.findOne({
+                tutorId : tutor.tutorId,
+                BookedBy : tutor.bookedBy
+            })
+
+            if(alreadyBooked){
+                return res.send({message: "Already Booked"})
+            }
+
+            const result = await bookedCollection.insertOne(tutor)
+            res.send(result)
+        })
+
+        // loggin user to show their booked tutors 
+
+        app.get('/bookedTutor', async(req, res)=>{
+            const email = req.query.email;
+            const query = {bookedBy : email}
+            const bookedTutor = await bookedCollection.find(query).toArray()
+            res.send(bookedTutor)
+        })
+
+        
+
+        // delete booked id 
+
+        app.delete('/deleteTutor/:id', async(req, res)=>{
+            const id = req.params.id
+            const query = {_id : new ObjectId(id)}
+            const result = await clientSide.deleteOne(query)
+            res.send(result)
+        })
+
+        // update tutor
+
+        app.put("/update-tutor/:id", async(req, res)=>{
+            const id= req.params.id
+            const filter = {_id : new ObjectId(id)}
+            const tutorUpdate = req.body;
+            const updateDoc = {
+                $set : tutorUpdate
+            }
+            const result = await clientSide.updateOne(filter, updateDoc)
+            res.send(result)
+        })
+
+        // find update single tutors
+
+        app.get('/update-tutor/:id' , async(req, res)=>{
+            const id = req.params.id
+            const query = {_id : new ObjectId(id)}
+            const UpdateSingle = await clientSide.findOne(query)
+            res.send(UpdateSingle)
+        })
+       
 
 
 

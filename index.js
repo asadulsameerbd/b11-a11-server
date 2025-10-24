@@ -2,13 +2,41 @@ require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express')
 const cors = require("cors")
+const jwt = require("jsonwebtoken")
+const cookieParser = require("cookie-parser")
 const app = express()
 const port = process.env.PORT || 3000
 
 
-// malware 
-app.use(cors())
+// middleware  
+app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+}))
 app.use(express.json())
+app.use(cookieParser())
+
+
+
+// jwt verify
+
+const verifyToken = (req, res, next) => {
+    const token = req?.cookies?.token
+
+    if (!token) {
+        return res.status(401).send({ message: "unauthorized Access" })
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET_TOKEN, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: "unauthorized Access" })
+        }
+
+        req.decoded = decoded
+
+        next()
+    })
+}
 
 
 // mongoDB
@@ -46,15 +74,17 @@ async function run() {
 
         // client read 
 
-        app.get('/addtutors', async (req, res) =>{
+        app.get('/addtutors', async (req, res) => {
+
+
             const tutors = await clientSide.find().toArray()
             res.send(tutors)
         })
 
         //tutor details
-        app.get("/tutorDetails/:id" , async(req, res)=>{
+        app.get("/tutorDetails/:id", async (req, res) => {
             const id = req.params.id
-            const query = {_id : new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const result = await clientSide.findOne(query)
             res.send(result)
         })
@@ -62,11 +92,15 @@ async function run() {
 
         // mytutorial 
 
-        app.get("/add-tutors" , async(req, res)=>{
+        app.get("/add-tutors", verifyToken, async (req, res) => {
             const email = req.query.email
             const query = {}
-            if(email){
+            if (email) {
                 query.email = email
+            }
+
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: "forbidden access" })
             }
             const result = await clientSide.find(query).toArray()
             res.send(result)
@@ -74,15 +108,15 @@ async function run() {
 
         // Booked tutor
 
-        app.post('/bookedTutor', async(req, res)=>{
+        app.post('/bookedTutor', async (req, res) => {
             const tutor = req.body;
             const alreadyBooked = await bookedCollection.findOne({
-                tutorId : tutor.tutorId,
-                BookedBy : tutor.bookedBy
+                tutorId: tutor.tutorId,
+                BookedBy: tutor.bookedBy
             })
 
-            if(alreadyBooked){
-                return res.send({message: "Already Booked"})
+            if (alreadyBooked) {
+                return res.send({ message: "Already Booked" })
             }
 
             const result = await bookedCollection.insertOne(tutor)
@@ -91,32 +125,32 @@ async function run() {
 
         // loggin user to show their booked tutors 
 
-        app.get('/bookedTutor', async(req, res)=>{
+        app.get('/bookedTutor', async (req, res) => {
             const email = req.query.email;
-            const query = {bookedBy : email}
+            const query = { bookedBy: email }
             const bookedTutor = await bookedCollection.find(query).toArray()
             res.send(bookedTutor)
         })
 
-        
+
 
         // delete booked id 
 
-        app.delete('/deleteTutor/:id', async(req, res)=>{
+        app.delete('/deleteTutor/:id', async (req, res) => {
             const id = req.params.id
-            const query = {_id : new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const result = await clientSide.deleteOne(query)
             res.send(result)
         })
 
         // update tutor
 
-        app.put("/update-tutor/:id", async(req, res)=>{
-            const id= req.params.id
-            const filter = {_id : new ObjectId(id)}
+        app.put("/update-tutor/:id", async (req, res) => {
+            const id = req.params.id
+            const filter = { _id: new ObjectId(id) }
             const tutorUpdate = req.body;
             const updateDoc = {
-                $set : tutorUpdate
+                $set: tutorUpdate
             }
             const result = await clientSide.updateOne(filter, updateDoc)
             res.send(result)
@@ -124,13 +158,34 @@ async function run() {
 
         // find update single tutors
 
-        app.get('/update-tutor/:id' , async(req, res)=>{
+        app.get('/update-tutor/:id', async (req, res) => {
             const id = req.params.id
-            const query = {_id : new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const UpdateSingle = await clientSide.findOne(query)
             res.send(UpdateSingle)
         })
-       
+
+
+        // jwt 
+
+        app.post("/jwt", async (req, res) => {
+            const userData = req.body
+            const token = jwt.sign(userData, process.env.JWT_SECRET_TOKEN, { expiresIn: "2h" })
+
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: false
+            })
+
+
+            res.send({ status: true })
+        })
+
+        app.post("/logout", (req, res) => {
+            res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "lax" });
+            res.send({ success: true });
+        });
+
 
 
 
@@ -139,7 +194,7 @@ async function run() {
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
-       
+
     }
 }
 run().catch(console.dir);

@@ -187,11 +187,25 @@ async function run() {
         });
 
 
+        // mongo total user length 
+
+        app.get('/total-users', async(req, res)=>{
+            try{
+                const Users = await clientSide.distinct("email")
+                const totalUsers = Users.length
+                res.send({total : totalUsers})
+               
+            }catch(error){
+                res.status(500).send({error : "Something went Wrong!"})
+            }
+        })
+
+
 
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
 

@@ -10,7 +10,7 @@ const port = process.env.PORT || 3000
 
 // middleware  
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: "https://b11-a11-ecdf8.web.app",
     credentials: true
 }));
 

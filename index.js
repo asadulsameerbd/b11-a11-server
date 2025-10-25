@@ -11,8 +11,9 @@ const port = process.env.PORT || 3000
 // middleware  
 app.use(cors({
     origin: "http://localhost:5173",
-    credentials: true,
-}))
+    credentials: true
+}));
+
 app.use(express.json())
 app.use(cookieParser())
 
@@ -22,6 +23,7 @@ app.use(cookieParser())
 
 const verifyToken = (req, res, next) => {
     const token = req?.cookies?.token
+    console.log(token);
 
     if (!token) {
         return res.status(401).send({ message: "unauthorized Access" })
@@ -170,7 +172,8 @@ async function run() {
 
         app.post("/jwt", async (req, res) => {
             const userData = req.body
-            const token = jwt.sign(userData, process.env.JWT_SECRET_TOKEN, { expiresIn: "2h" })
+            const token = jwt.sign(userData, process.env.JWT_SECRET_TOKEN, { expiresIn: "30d" })
+            console.log(token);
 
             res.cookie("token", token, {
                 httpOnly: true,
@@ -178,25 +181,23 @@ async function run() {
             })
 
 
+
             res.send({ status: true })
         })
 
-        app.post("/logout", (req, res) => {
-            res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "lax" });
-            res.send({ success: true });
-        });
+       
 
 
         // mongo total user length 
 
-        app.get('/total-users', async(req, res)=>{
-            try{
+        app.get('/total-users', async (req, res) => {
+            try {
                 const Users = await clientSide.distinct("email")
                 const totalUsers = Users.length
-                res.send({total : totalUsers})
-               
-            }catch(error){
-                res.status(500).send({error : "Something went Wrong!"})
+                res.send({ total: totalUsers })
+
+            } catch (error) {
+                res.status(500).send({ error: "Something went Wrong!" })
             }
         })
 
